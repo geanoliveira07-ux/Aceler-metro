@@ -1,1 +1,10 @@
-.pio
+# Arquivos do PlatformIO e compilação
+.pio/
+.vscode/
+*.bin
+*.elf
+*.hex
+
+# Arquivos temporários de SO
+.DS_Store
+Thumbs.db
