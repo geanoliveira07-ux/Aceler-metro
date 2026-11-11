@@ -67,14 +67,14 @@ void thread_calculo(void)
 
     while (1) {
         // Cálculo da Velocidade: v = v_anterior + (área do trapézio da aceleração)
-		vx = vx_ant + (dt / 2,0) * (ax + ax_ant);
-		vy = vy_ant + (dt / 2,0) * (ay + ay_ant);
-		vz = vz_ant + (dt / 2,0) * (az + az_ant);
+		vx = vx_ant + (dt / 2.0) * (ax + ax_ant);
+		vy = vy_ant + (dt / 2.0) * (ay + ay_ant);
+		vz = vz_ant + (dt / 2.0) * (az + az_ant);
 
         // Cálculo da Posição: p = p_anterior + (área do trapézio da velocidade)
-		px = px + (dt / 2,0) * (vx + vx_ant);
-		py = py + (dt / 2,0) * (vy + vy_ant);
-		pz = pz + (dt / 2,0) * (vz + vz_ant);
+		px = px + (dt / 2.0) * (vx + vx_ant);
+		py = py + (dt / 2.0) * (vy + vy_ant);
+		pz = pz + (dt / 2.0) * (vz + vz_ant);
 
         // Guarda os valores atuais para usar na próxima conta como "anteriores"
 		ax_ant = ax, ay_ant = ay, az_ant = az;
@@ -88,25 +88,15 @@ void thread_calculo(void)
 void thread_envio_serial(void)
 {
 	k_sleep(K_MSEC(1200));
-    printk("========================================\n");
-    printk("  FRDM-KL25Z - Acelerometro MMA8451Q\n");
-	printk("     Iniciando envio de dados...\n");
-    printk("========================================\n");
-
+    
 	while (1) {
 		// Imprime os valores com algumas casas decimais
-		printk("T: %u ms | Acel(x,y,z): %.2f, %.2f, %.2f 
-						 | Vel(x,y,z): %.2f, %.2f, %.2f 
-						 | Pos(x,y,z): %.2f, %.2f, %.2f\r\n", 
-				tempo_ms, ax, ay, az, 
-						  vx, vy, vz, 
-						  px, py, pz);
+		printk("%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f\n", 
+				ax, ay, az, vx, vy, vz, px, py, pz);
 	
 		k_sleep(K_MSEC(500));
 	}
 }
-
-void main(void) {}
 
 	// Tamanho da pilha para cada thread
 	#define STACK_SIZE 1024
