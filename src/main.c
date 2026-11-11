@@ -20,14 +20,15 @@ void thread_aquisicao(void)
     struct sensor_value accel_x, accel_y, accel_z;
     int ret;
 
+    double grav_x = 0, grav_y = 0, grav_z = 9.81;
+
     // Verificar se o dispositivo está pronto
     if (!device_is_ready(accel)) {
         printk("ERRO: Acelerometro nao esta pronto!\n");
         return;
     }
 
-    // Pequeno delay antes de começar a enviar dados
-    k_sleep(K_MSEC(1000));
+    k_sleep(K_MSEC(1000));      // Pequeno delay antes de começar a enviar dados
 
     while (1) {
         // Solicitar leitura do sensor
@@ -44,9 +45,25 @@ void thread_aquisicao(void)
         sensor_channel_get(accel, SENSOR_CHAN_ACCEL_Y, &accel_y);
         sensor_channel_get(accel, SENSOR_CHAN_ACCEL_Z, &accel_z);
 
-		ax = sensor_value_to_double(&accel_x);
-		ay = sensor_value_to_double(&accel_y);
-		az = sensor_value_to_double(&accel_z);
+		double ax_bruto = sensor_value_to_double(&accel_x);
+		double ay_bruto = sensor_value_to_double(&accel_y);
+		double az_bruto = sensor_value_to_double(&accel_z);
+
+        // Filtro "aborve" 20% da leitura atual e mantém 80% do histórico.
+        // Calcula a componente gravitacional constante me qualquer inclinação
+        grav_x = (0.8 * grav_x) + (0.2 * ax_bruto);
+        grav_y = (0.8 * grav_y) + (0.2 * ay_bruto);
+        grav_z = (0.8 * grav_z) + (0.2 * az_bruto);
+
+        // Aceleração limpa = leitura bruta - componente da gravidade
+        double ax_mov = ax_bruto - grav_x;
+        double ay_mov = ay_bruto - grav_y;
+        double az_mov = az_bruto - grav_z;
+
+        // Zona morta: zera oscilações mínimas (ruídos) menores que 0.3 m/s^2
+        ax = (abs(ax_mov) < 0.3) ? 0 : ax_mov;
+        ay = (abs(ay_mov) < 0.3) ? 0 : ay_mov;
+        az = (abs(az_mov) < 0.3) ? 0 : az_mov;
 
         // Aguardar 500ms antes da próxima leitura
         k_sleep(K_MSEC(500));
@@ -63,6 +80,10 @@ void thread_calculo(void)
 	double ax_ant = 0, ay_ant = 0, az_ant = 0;
 	double vx_ant = 0, vy_ant = 0, vz_ant = 0;
 
+    // Fatores de recuo/atrito: puxam gradativamente os valores para 0 ao longo do tempo 
+    double atenuacao_v = 0.80;  // Velocidade decai 20% a cada meio segundo
+    double atenuacao_p = 0.90;  // Posicao decai 10% a cada meio segundo
+
     k_sleep(K_MSEC(1100));		// Espera a Thread 1 fazer a primeira leitura antes de começar
 
     while (1) {
@@ -71,10 +92,20 @@ void thread_calculo(void)
 		vy = vy_ant + (dt / 2.0) * (ay + ay_ant);
 		vz = vz_ant + (dt / 2.0) * (az + az_ant);
 
+        // Diminui gradativamente a velocidade
+        vx *= atenuacao_v;
+        vy *= atenuacao_v;
+        vz *= atenuacao_v;
+
         // Cálculo da Posição: p = p_anterior + (área do trapézio da velocidade)
 		px = px + (dt / 2.0) * (vx + vx_ant);
 		py = py + (dt / 2.0) * (vy + vy_ant);
 		pz = pz + (dt / 2.0) * (vz + vz_ant);
+
+        // Diminui gradativamente a posição
+        px *= atenuacao_p;
+        py *= atenuacao_p;
+        pz *= atenuacao_p;
 
         // Guarda os valores atuais para usar na próxima conta como "anteriores"
 		ax_ant = ax, ay_ant = ay, az_ant = az;
@@ -90,7 +121,7 @@ void thread_envio_serial(void)
 	k_sleep(K_MSEC(1200));
     
 	while (1) {
-		// Imprime os valores com algumas casas decimais
+		// Imprime os valores com algumas casas decimais (aceleracao, velocidade, posicao)
 		printk("%.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f, %.3f\n", 
 				ax, ay, az, vx, vy, vz, px, py, pz);
 	
@@ -98,7 +129,9 @@ void thread_envio_serial(void)
 	}
 }
 
-	// Tamanho da pilha para cada thread
+//=============================================================================================================
+// 3. Declarações de Threads e de Prioridades
+    // Tamanho da pilha para cada thread
 	#define STACK_SIZE 1024
 
 	// Prioridades 
