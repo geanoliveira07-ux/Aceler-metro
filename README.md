@@ -17,6 +17,9 @@ Lógica e Arquitetura adotada: Para a comunicação entre as threads, foi utiliz
 tarefas. O escalonador do Zephyr gerencia as threads por prioridade, sendo da ordem mais importante para a menos: "leitura do sensor" 
 (garante que não se perca amostras) >> "cálculo" (processa os dados de leitura) >> "envio serial" (apenas imprime o que já foi calculado)
 
+Como resultado final, a versão definitiva apresentou-se o seguinte gráfico:
+<img width="3000" height="3600" alt="image" src="https://github.com/user-attachments/assets/572d1022-042c-4337-886c-91e2907a2c22" />
+
 ```shell
 Observações: 
              1° e 2° Commit contém apenas a estrutura padrão do acelerômetro, sobretudo, na parte de extração do sinal.
